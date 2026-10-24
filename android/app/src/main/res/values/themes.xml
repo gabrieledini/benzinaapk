@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- niente AppCompat: l'Activity è una semplice android.app.Activity con una WebView -->
+    <style name="Tema" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:colorPrimary">#0b8f63</item>
+        <item name="android:colorAccent">#0b8f63</item>
+        <!-- stesso colore dell'header della pagina, con icone scure -->
+        <item name="android:statusBarColor">#f7f8f7</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">#f7f8f7</item>
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+</resources>

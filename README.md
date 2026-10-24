@@ -50,7 +50,7 @@ Per pubblicarlo sul Play Store servirebbe una chiave di release vera: si genera 
 android/app/src/main/
   java/it/gabriele/allapompa/MainActivity.java   WebView + richieste native al MIMIT
   assets/index.html                              tutta l'applicazione
-  res/mipmap-*/                                  icone, legacy e adaptive
+  res/values/, res/mipmap-xxhdpi/                nome, tema e icone
 .github/workflows/apk.yml                        build automatica
 ```
 

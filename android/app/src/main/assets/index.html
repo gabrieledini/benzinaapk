@@ -32,6 +32,12 @@ header .wrap{display:flex;align-items:center;gap:9px;height:56px}
 .logo svg{width:23px;height:23px;color:var(--acc);flex:none}
 .data{margin-left:auto;font-size:12px;color:var(--text-3);text-align:right;line-height:1.3}
 .data b{display:block;color:var(--text-2);font-weight:600}
+.aggiorna{flex:none;display:grid;place-items:center;width:36px;height:36px;border-radius:10px;
+  background:var(--surface);border:1px solid var(--line);color:var(--text-2);padding:0;cursor:pointer}
+.aggiorna svg{width:17px;height:17px}
+.aggiorna:disabled{color:var(--text-3)}
+.aggiorna:disabled svg{animation:gira 1s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
 .chips{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;padding-bottom:2px}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:none;background:var(--surface);border:1px solid var(--line);border-radius:999px;
@@ -119,6 +125,9 @@ footer{color:var(--text-3);font-size:12px;line-height:1.6;margin-top:24px}
     <span>Alla pompa</span>
   </div>
   <div class="data"><b id="dataEstr">—</b><span id="fonte">estrazione</span></div>
+  <button class="aggiorna" id="btnAggiorna" aria-label="Aggiorna i dati" disabled>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
+  </button>
 </div></header>
 
 <div class="province"><div class="wrap"><div class="chips" id="chipsProv"></div></div></div>
@@ -211,6 +220,8 @@ const CDN = [
   p => `https://cdn.jsdelivr.net/gh/${REPO}@main/${p}`
 ];
 const GIORNI = 30, PASSO = 3, MAX_SALVATI = 45;
+const MIN_PUNTI = 4;   // sotto questa soglia lo storico è troppo corto: si stima
+const SEZIONI = ["#hero","#filtri","#kpis","#pTrend","#pBrand","#pCom","#pList"];
 
 const TOSCANA = {AR:"Arezzo",FI:"Firenze",GR:"Grosseto",LI:"Livorno",LU:"Lucca",
   MS:"Massa-Carrara",PI:"Pisa",PO:"Prato",PT:"Pistoia",SI:"Siena"};
@@ -327,6 +338,11 @@ function rigaPrezzo(riga, out){
 /* ---- avvio ---- */
 async function avvio(){
   const problemi = [];
+  /* si riparte da zero: avvio() serve anche al pulsante Aggiorna */
+  S.plants = []; S.index.clear(); S.giorni.clear();
+  S.ultima = null; S.fonte = ""; S.archivioCaricato = false;
+  $("#avviso").innerHTML = "";
+  SEZIONI.forEach(s => $(s).hidden = true);
 
   /* 1. il ministero, raggiungibile solo da un IP italiano */
   try{
@@ -384,8 +400,17 @@ async function avvio(){
   chipsProvince();
   costruisciFiltri();
   render();
-  ["#hero","#filtri","#kpis","#pTrend","#pBrand","#pCom","#pList"].forEach(s => $(s).hidden = false);
-  if(S.giorni.size < 4) $("#btnArchivio").classList.remove("hide");
+  SEZIONI.forEach(s => $(s).hidden = false);
+  if(S.giorni.size < MIN_PUNTI) $("#btnArchivio").classList.remove("hide");
+}
+
+let inCorso = false;
+async function aggiorna(){
+  if(inCorso) return;
+  inCorso = true;
+  $("#btnAggiorna").disabled = true;
+  try{ await avvio(); }
+  finally{ inCorso = false; $("#btnAggiorna").disabled = false; }
 }
 
 function mostraAvviso(){
@@ -555,11 +580,31 @@ function serie(brand){
   return out.sort((a,b) => a.d.localeCompare(b.d));
 }
 
+/* stima di ripiego: raggruppa i prezzi di oggi per data di ultima comunicazione.
+   Serve solo finché lo storico giornaliero non ha abbastanza punti. */
+function stima(brand){
+  const per = new Map(), rif = Date.parse(S.ultima);
+  for(const r of filtra(oggi(), brand, S.com)){
+    if(!r.d) continue;
+    const eta = (rif - Date.parse(r.d))/864e5;
+    if(eta < 0 || eta > GIORNI - 1) continue;
+    push(per, r.d, r.p);
+  }
+  return [...per.entries()].filter(([,v]) => v.length >= 2)
+    .map(([d,v]) => ({d, v:mean(v), n:v.length})).sort((a,b) => a.d.localeCompare(b.d));
+}
+
 function disegnaTrend(avanzamento){
-  const A = serie(S.brand), B = S.brand2 ? serie(S.brand2) : [];
+  const reali = serie(S.brand);
+  let stimata = reali.length < MIN_PUNTI, A = stimata ? stima(S.brand) : reali;
+  if(stimata && A.length < 2 && reali.length >= 2){ stimata = false; A = reali; }
+  const B = !S.brand2 ? [] : stimata ? stima(S.brand2) : serie(S.brand2);
   $("#trendSrc").textContent = avanzamento ? "caricamento " + avanzamento
+    : stimata ? "stima dalle date di comunicazione"
     : A.length + (A.length===1?" rilevazione":" rilevazioni");
-  $("#trendNote").textContent = A.length > 1
+  $("#trendNote").textContent = stimata
+    ? "Lo storico è ancora corto, quindi ogni punto è la media degli impianti la cui ultima comunicazione risale a quella data: indica una tendenza, non una misura. Aprendo l'app ogni giorno la curva diventa reale."
+    : A.length > 1
     ? "Ogni punto è la media effettiva di quel giorno. L'app salva le medie a ogni apertura, quindi la curva si allunga da sola."
     : "Serve più di un giorno. Apri l'app nei prossimi giorni, oppure aggiungi subito i giorni passati dall'archivio pubblico.";
   $("#trendKey").innerHTML = `<span><i style="background:var(--acc)"></i>${esc(S.brand||"—")}</span>` +
@@ -682,8 +727,9 @@ const modo = self => {
 $("#cSelf").addEventListener("click", () => modo(true));
 $("#cServ").addEventListener("click", () => modo(false));
 $("#btnArchivio").addEventListener("click", caricaArchivio);
+$("#btnAggiorna").addEventListener("click", aggiorna);
 
-avvio();
+aggiorna();
 })();
 </script>
 </body>
