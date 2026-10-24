@@ -1,0 +1,62 @@
+name: Compila APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: SDK Android
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Compila
+        working-directory: android
+        run: gradle assembleDebug assembleRelease --no-daemon --stacktrace
+
+      - name: Rinomina
+        run: |
+          mkdir -p apk
+          cp android/app/build/outputs/apk/debug/*.apk     apk/alla-pompa-debug.apk
+          cp android/app/build/outputs/apk/release/*.apk   apk/alla-pompa.apk
+          ls -la apk
+
+      # Scaricabile dalla scheda Actions, anche dal telefono
+      - name: Pubblica l'artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: alla-pompa-apk
+          path: apk/*.apk
+          retention-days: 90
+
+      # Una release fissa, così il link di download non cambia mai
+      - name: Release "ultima"
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ultima
+          name: Ultima build
+          files: apk/alla-pompa.apk
+          body: |
+            APK firmato con la chiave di debug: si installa da sideload.
+            Build del commit ${{ github.sha }}.

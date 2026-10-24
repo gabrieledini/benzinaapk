@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Alla pompa · Toscana</title>
+<meta name="description" content="Prezzi dei carburanti nelle province toscane, dagli open data del MIMIT.">
+<meta name="theme-color" content="#f7f8f7">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f7f8f7; --surface:#ffffff; --surface-2:#eff3f1; --line:#e3e9e6;
+  --text:#101b17; --text-2:#56675f; --text-3:#87958e;
+  --acc:#0b8f63; --acc-soft:#e4f4ed; --warn:#c2410c; --warn-soft:#fdf0e7; --cool:#2563eb;
+  --shadow:0 1px 2px rgba(16,27,23,.04), 0 10px 26px -16px rgba(16,27,23,.22);
+  --r:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  padding:0 0 calc(44px + env(safe-area-inset-bottom,0px)); overflow-x:hidden;
+}
+.wrap{max-width:720px;margin:0 auto;padding:0 16px}
+
+header{position:sticky;top:0;z-index:40;background:rgba(247,248,247,.9);
+  backdrop-filter:saturate(1.6) blur(12px);-webkit-backdrop-filter:saturate(1.6) blur(12px);
+  border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:41}
+header .wrap{display:flex;align-items:center;gap:9px;height:56px}
+.logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:16px;letter-spacing:-.02em}
+.logo svg{width:23px;height:23px;color:var(--acc);flex:none}
+.data{margin-left:auto;font-size:12px;color:var(--text-3);text-align:right;line-height:1.3}
+.data b{display:block;color:var(--text-2);font-weight:600}
+
+.chips{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;padding-bottom:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;background:var(--surface);border:1px solid var(--line);border-radius:999px;
+  padding:7px 14px;font:inherit;font-size:13px;font-weight:500;color:var(--text-2);cursor:pointer;
+  white-space:nowrap;transition:background .15s,color .15s,border-color .15s}
+.chip:hover{border-color:var(--acc)}
+.chip[aria-pressed="true"]{background:var(--text);color:#fff;border-color:var(--text)}
+.province{padding:10px 0 2px;border-bottom:1px solid var(--line);background:var(--bg);
+  position:sticky;top:calc(56px + env(safe-area-inset-top,0px));z-index:39}
+
+.avviso{display:flex;gap:11px;background:var(--warn-soft);border:1px solid #f3d6c3;
+  border-radius:var(--r);padding:13px 15px;margin:16px 0 0;font-size:13px;line-height:1.55;color:#7c3a12}
+.avviso svg{width:18px;height:18px;flex:none;margin-top:1px;color:var(--warn)}
+.avviso b{font-weight:650}
+
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);
+  margin:16px 0 14px;padding:20px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;inset:auto -50px -80px auto;width:230px;height:230px;
+  background:radial-gradient(circle,var(--acc) 0%,transparent 70%);opacity:.08;pointer-events:none}
+.pill{display:inline-flex;align-items:center;background:var(--acc-soft);color:var(--acc);
+  border-radius:999px;padding:4px 11px;font-size:12px;font-weight:600}
+.pill.grey{background:var(--surface-2);color:var(--text-2)}
+.top{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px}
+.prezzo{display:flex;align-items:baseline;gap:7px;font-size:clamp(46px,14vw,62px);font-weight:700;
+  letter-spacing:-.045em;line-height:1.05;font-variant-numeric:tabular-nums;margin:4px 0 2px}
+.prezzo .u{font-size:16px;font-weight:600;color:var(--text-3);letter-spacing:0}
+.sotto{color:var(--text-2);font-size:13px}
+.estremi{display:flex;gap:10px;margin-top:16px}
+.estremo{flex:1;background:var(--surface-2);border-radius:12px;padding:10px 12px;min-width:0}
+.estremo span{display:block;font-size:10.5px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:.07em}
+.estremo b{font-size:19px;font-variant-numeric:tabular-nums;letter-spacing:-.025em}
+.estremo i{display:block;font-style:normal;font-size:12px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.estremo.lo b{color:var(--acc)} .estremo.hi b{color:var(--warn)}
+
+.filtri{display:grid;gap:10px;margin-bottom:16px}
+.selects{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sel{position:relative}
+.sel label{position:absolute;top:7px;left:13px;font-size:10px;font-weight:600;color:var(--text-3);
+  text-transform:uppercase;letter-spacing:.07em;pointer-events:none}
+select{width:100%;appearance:none;font:inherit;font-size:14px;font-weight:500;color:var(--text);
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px 30px 8px 12px;cursor:pointer}
+.sel::after{content:"";position:absolute;right:14px;top:26px;width:7px;height:7px;
+  border-right:2px solid var(--text-3);border-bottom:2px solid var(--text-3);transform:rotate(45deg);pointer-events:none}
+select:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:13px 14px;box-shadow:var(--shadow)}
+.kpi span{display:block;font-size:10.5px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:.07em}
+.kpi b{font-size:22px;font-weight:650;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+.kpi b.su{color:var(--warn)} .kpi b.giu{color:var(--acc)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden}
+.card>h2{margin:0;padding:15px 16px 0;font-size:15px;font-weight:650;letter-spacing:-.015em}
+.card>h2 em{display:block;font-style:normal;font-size:12px;font-weight:400;color:var(--text-3);margin-top:2px}
+.card .body{padding:12px 16px 16px}
+svg.g{display:block;width:100%;height:auto;overflow:visible}
+.tick{fill:var(--text-3);font-size:10px;font-weight:500}
+.lbl{fill:var(--text);font-size:11px;font-weight:500}
+.val{fill:var(--text-2);font-size:11px;font-weight:600}
+.val.on{fill:var(--acc)}
+.griglia{stroke:var(--line);stroke-width:1}
+.legenda{display:flex;gap:14px;font-size:12px;color:var(--text-2);margin-bottom:10px;flex-wrap:wrap}
+.legenda i{display:inline-block;width:16px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.nota{font-size:12px;color:var(--text-3);line-height:1.55;margin:12px 0 0}
+.azione{display:inline-flex;align-items:center;gap:7px;background:var(--acc);color:#fff;border:0;
+  border-radius:10px;padding:9px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;margin-top:12px}
+.azione:disabled{background:var(--surface-2);color:var(--text-3);cursor:default}
+
+.riga{display:flex;align-items:center;gap:12px;padding:11px 16px;border-top:1px solid var(--line)}
+.riga:first-child{border-top:0}
+.riga .p{font-size:18px;font-weight:650;letter-spacing:-.025em;font-variant-numeric:tabular-nums;width:66px;flex:none;color:var(--acc)}
+.riga .d{min-width:0;flex:1}
+.riga .d b{display:block;font-size:14px;font-weight:600}
+.riga .d span{display:block;font-size:12px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.riga .q{font-size:11px;color:var(--text-3);flex:none;text-align:right}
+.riga .q.vecchio{color:var(--warn)}
+.riga a{color:inherit;text-decoration:none}
+.riga a:hover b{color:var(--acc)}
+
+.stato{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;
+  margin:16px 0;box-shadow:var(--shadow);font-size:13px;color:var(--text-2)}
+.stato .barra{height:4px;background:var(--surface-2);border-radius:999px;margin-top:12px;overflow:hidden}
+.stato .barra i{display:block;height:100%;border-radius:999px;background:var(--acc);width:0;transition:width .25s}
+.stato.err{border-color:#f0c9b2;background:var(--warn-soft);color:#7c3a12}
+.stato code{background:var(--surface-2);border-radius:5px;padding:1px 6px;font-size:12px;color:var(--text)}
+footer{color:var(--text-3);font-size:12px;line-height:1.6;margin-top:24px}
+footer a{color:var(--text-2)}
+.hide{display:none!important}
+@media(min-width:560px){.kpis{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 20V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v15"/><path d="M3 20h12"/>
+        <path d="M6.5 7.5h5v3.5h-5z"/><path d="M14 8h2.5a2 2 0 0 1 2 2v6a1.5 1.5 0 0 0 3 0V11l-2-2.5"/>
+      </svg>
+      <span>Alla pompa</span>
+    </div>
+    <div class="data"><b id="dataEstr">—</b><span>estrazione</span></div>
+  </div>
+</header>
+
+<div class="province"><div class="wrap"><div class="chips" id="chipsProv"></div></div></div>
+
+<main class="wrap">
+
+  <div id="avviso"></div>
+
+  <section class="hero" id="hero" hidden>
+    <div class="top"><span class="pill" id="pillBrand">—</span><span class="pill grey" id="pillScope">—</span></div>
+    <div class="prezzo"><span id="valore">—,———</span><span class="u">€/litro</span></div>
+    <div class="sotto" id="sotto">media della rete</div>
+    <div class="estremi">
+      <div class="estremo lo"><span>Minimo</span><b id="loVal">—</b><i id="loWho">—</i></div>
+      <div class="estremo hi"><span>Massimo</span><b id="hiVal">—</b><i id="hiWho">—</i></div>
+    </div>
+  </section>
+
+  <div class="stato" id="stato">Lettura dei dati…<div class="barra"><i></i></div></div>
+
+  <section class="filtri" id="filtri" hidden>
+    <div class="chips" id="chipsFuel"></div>
+    <div class="chips">
+      <button class="chip" id="cSelf" aria-pressed="true">Self</button>
+      <button class="chip" id="cServ" aria-pressed="false">Servito</button>
+    </div>
+    <div class="selects">
+      <div class="sel"><label for="brand">Bandiera</label><select id="brand"></select></div>
+      <div class="sel"><label for="com">Comune</label><select id="com"></select></div>
+    </div>
+  </section>
+
+  <div class="kpis" id="kpis" hidden>
+    <div class="kpi"><span>Impianti</span><b id="kCount">—</b></div>
+    <div class="kpi"><span>Mediana</span><b id="kMed">—</b></div>
+    <div class="kpi"><span>Δ altre</span><b id="kDelta">—</b></div>
+    <div class="kpi"><span>Freschi</span><b id="kFresh">—</b></div>
+  </div>
+
+  <section class="card" id="pTrend" hidden>
+    <h2>Andamento<em id="trendSrc">—</em></h2>
+    <div class="body">
+      <div class="legenda" id="trendKey"></div>
+      <svg class="g" id="svgTrend" viewBox="0 0 640 230" role="img" aria-label="Andamento del prezzo medio"></svg>
+      <div class="selects" style="margin-top:12px">
+        <div class="sel"><label for="brand2">Confronta con</label><select id="brand2"></select></div>
+      </div>
+      <p class="nota" id="trendNote"></p>
+      <button class="azione hide" id="caricaStorico">Carica lo storico di 30 giorni</button>
+    </div>
+  </section>
+
+  <section class="card" id="pBrand" hidden>
+    <h2>Classifica bandiere<em id="brandSub">—</em></h2>
+    <div class="body"><svg class="g" id="svgBrand" viewBox="0 0 640 300" role="img" aria-label="Confronto fra bandiere"></svg></div>
+  </section>
+
+  <section class="card" id="pCom" hidden>
+    <h2>Dove costa meno<em>comuni con almeno 2 impianti</em></h2>
+    <div class="body"><svg class="g" id="svgCom" viewBox="0 0 640 260" role="img" aria-label="Media per comune"></svg></div>
+  </section>
+
+  <section class="card" id="pList" hidden>
+    <h2 style="padding-bottom:12px">Impianti<em id="listScope">—</em></h2>
+    <div id="elenco"></div>
+  </section>
+
+  <footer>
+    Dati: Ministero delle Imprese e del Made in Italy — Osservaprezzi Carburanti, licenza IODL 2.0,
+    letti dall'archivio giornaliero pubblico <em>benzina-data</em>.
+    I prezzi sono quelli in vigore alle 8 del mattino comunicati dai gestori: si aggiornano una volta al giorno, non in tempo reale.
+    Servizio non ufficiale, non affiliato al MIMIT né ai marchi citati.
+  </footer>
+</main>
+
+<script>
+(() => {
+"use strict";
+
+/* ============================================================
+   Sorgente dati.
+   Il server del MIMIT dal 16 ottobre 2026 risponde solo a IP
+   italiani, quindi da Netlify (e da qualunque proxy estero) non
+   è raggiungibile. Qui si legge invece l'archivio pubblico che
+   conserva una copia gzippata dei due CSV per ogni giorno:
+   ha CORS aperto, pesa poco e tiene lo storico, così il grafico
+   a 30 giorni si costruisce senza alcun servizio lato server.
+   ============================================================ */
+const REPO = "LucaDDDD/benzina-data";
+const CDN = [
+  (p) => `https://raw.githubusercontent.com/${REPO}/main/${p}`,
+  (p) => `https://cdn.jsdelivr.net/gh/${REPO}@main/${p}`
+];
+const GIORNI = 30, PASSO = 3;   // una rilevazione ogni 3 giorni: ~10 file invece di 30
+
+const TOSCANA = {AR:"Arezzo",FI:"Firenze",GR:"Grosseto",LI:"Livorno",LU:"Lucca",
+  MS:"Massa-Carrara",PI:"Pisa",PO:"Prato",PT:"Pistoia",SI:"Siena"};
+
+const S = {
+  prov:"LU", plants:[], index:new Map(), giorni:new Map(),  // dataISO -> righe
+  ultima:null, brandCount:new Map(),
+  brand:"Q8", brand2:"*", fuel:"Benzina", self:true, com:"", storicoCaricato:false
+};
+
+const $ = s => document.querySelector(s);
+const eur = n => n.toLocaleString("it-IT",{minimumFractionDigits:3,maximumFractionDigits:3});
+const mean = a => a.reduce((x,y)=>x+y,0)/a.length;
+const median = a => { const s=[...a].sort((x,y)=>x-y), m=s.length>>1;
+  return s.length%2 ? s[m] : (s[m-1]+s[m])/2; };
+const push = (m,k,v) => { const a=m.get(k); if(a) a.push(v); else m.set(k,[v]); };
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const titolo = s => s.toLowerCase().replace(/(^|[\s'\-])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase());
+
+function normBrand(raw){
+  const b=(raw||"").trim(), U=b.toUpperCase();
+  if(!b) return "";
+  if(U.startsWith("Q8")||U.includes("KUWAIT")) return "Q8";
+  if(U==="AGIP ENI"||U==="ENI"||U.startsWith("ENILIVE")||U.startsWith("ENIMOOV")) return "Eni";
+  if(U==="API-IP"||U==="IP"||U==="ITALIANA PETROLI"||U==="ITALA PETROLI") return "IP";
+  if(U==="POMPE BIANCHE") return "Pompe bianche";
+  return b;
+}
+
+const iso = d => d.toISOString().slice(0,10);
+const compatta = s => s.replace(/-/g,"");
+const meno = (s,n) => iso(new Date(Date.parse(s) - n*864e5));
+const etichetta = s => s.slice(8) + "/" + s.slice(5,7);
+const percorso = (file,data) => `data/${data.slice(0,4)}/${data.slice(5,7)}/${file}-${compatta(data)}.csv.gz`;
+
+function stato(html, errore){
+  const el = $("#stato");
+  el.className = "stato" + (errore ? " err" : "");
+  el.classList.remove("hide");
+  el.innerHTML = html + (errore ? "" : '<div class="barra"><i id="barra"></i></div>');
+}
+const avanza = p => { const b = $("#barra"); if(b) b.style.width = p + "%"; };
+
+/* ---- scarica un CSV gzippato e lo passa riga per riga ---- */
+async function leggiGz(percorsoFile, onRiga){
+  let ultimo;
+  for(const base of CDN){
+    try{
+      const res = await fetch(base(percorsoFile));
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      if(!("DecompressionStream" in window)) throw new Error("browser senza supporto gzip");
+      const flusso = res.body.pipeThrough(new DecompressionStream("gzip"));
+      const lettore = flusso.getReader(), dec = new TextDecoder("utf-8");
+      let buf = "", n = 0;
+      for(;;){
+        const {done, value} = await lettore.read();
+        if(done) break;
+        buf += dec.decode(value, {stream:true});
+        let i;
+        while((i = buf.indexOf("\n")) >= 0){
+          const riga = buf.slice(0, i).replace(/\r$/, "");
+          buf = buf.slice(i + 1);
+          if(n > 1) onRiga(riga);
+          n++;
+        }
+      }
+      buf += dec.decode();
+      if(buf.trim() && n > 1) onRiga(buf.replace(/\r$/, ""));
+      if(n < 100) throw new Error("file troppo corto");
+      return n;
+    }catch(e){ ultimo = e; }
+  }
+  throw ultimo;
+}
+
+/* ---- anagrafica: solo impianti toscani ---- */
+function rigaAnagrafica(riga){
+  const p = riga.split("|");                  // qualche nome contiene "|": code lette dal fondo
+  if(p.length < 10) return;
+  const prov = p[p.length-3].trim().toUpperCase();
+  if(!TOSCANA[prov]) return;
+  const b = normBrand(p[2]);
+  if(!b) return;
+  const lat = parseFloat(p[p.length-2]), lon = parseFloat(p[p.length-1]);
+  S.index.set(p[0], S.plants.length);
+  S.plants.push({
+    n:(p[4]||"").trim().slice(0,60), c:titolo((p[p.length-4]||"").trim()), pv:prov, b,
+    lat:Number.isFinite(lat)?lat:null, lon:Number.isFinite(lon)?lon:null
+  });
+}
+
+/* ---- prezzi di un giorno ---- */
+function righeGiorno(riga, out){
+  const p = riga.split("|");
+  if(p.length < 5) return;
+  const i = S.index.get(p[0]);
+  if(i === undefined) return;
+  const prezzo = parseFloat(p[2]);
+  if(!(prezzo > 0.2 && prezzo < 5)) return;
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(p[4] || "");
+  out.push({ i, f:p[1].trim(), p:prezzo, s:p[3] === "1",
+             d:m ? `${m[3]}-${m[2]}-${m[1]}` : null });
+}
+
+/* ---- avvio ---- */
+async function avvio(){
+  stato("Lettura dell'archivio…");
+  let ultima;
+  try{
+    const r = await fetch(CDN[0]("data/last_update.json"), {cache:"no-cache"});
+    ultima = (await r.json()).ultima_estrazione;
+    if(!ultima) throw new Error("archivio senza data");
+  }catch(e){
+    return stato("Archivio non raggiungibile: " + esc(e.message), true);
+  }
+  S.ultima = ultima;
+  $("#dataEstr").textContent = new Date(ultima).toLocaleDateString("it-IT",
+    {day:"numeric", month:"short", year:"numeric"});
+
+  /* anagrafica: può mancare nel giorno esatto, si risale all'indietro */
+  stato("Anagrafica degli impianti toscani…"); avanza(15);
+  let trovata = false;
+  for(let k = 0; k < 12 && !trovata; k++){
+    try{
+      await leggiGz(percorso("anagrafica_impianti_attivi", meno(ultima, k)), rigaAnagrafica);
+      trovata = true;
+    }catch(e){ S.plants = []; S.index.clear(); }
+  }
+  if(!trovata) return stato("Anagrafica non trovata nell'archivio.", true);
+
+  stato("Prezzi del giorno…"); avanza(55);
+  try{
+    const righe = [];
+    await leggiGz(percorso("prezzo_alle_8", ultima), r => righeGiorno(r, righe));
+    if(!righe.length) throw new Error("nessun prezzo toscano");
+    S.giorni.set(ultima, righe);
+  }catch(e){
+    return stato("Prezzi non leggibili: " + esc(e.message), true);
+  }
+  avanza(100);
+  $("#stato").classList.add("hide");
+
+  mostraAvviso();
+  chipsProvince();
+  costruisciFiltri();
+  render();
+  ["#hero","#filtri","#kpis","#pTrend","#pBrand","#pCom","#pList"].forEach(s => $(s).hidden = false);
+
+  /* lo storico pesa qualche MB: su rete lenta o con risparmio dati si chiede prima */
+  const c = navigator.connection || {};
+  if(c.saveData || /2g/.test(c.effectiveType || "")) $("#caricaStorico").classList.remove("hide");
+  else caricaStorico();
+}
+
+function mostraAvviso(){
+  const giorniFa = Math.round((Date.now() - Date.parse(S.ultima)) / 864e5);
+  if(giorniFa < 2) return;
+  $("#avviso").innerHTML = `<div class="avviso">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg>
+    <div><b>Dati fermi a ${giorniFa} giorni fa.</b> Dal 16 ottobre 2026 il server del MIMIT risponde
+    solo a indirizzi IP italiani, quindi l'archivio pubblico su cui si appoggia questa pagina —
+    che gira all'estero — non riesce più a scaricare i file. Quando il blocco verrà rimosso,
+    i dati torneranno ad aggiornarsi da soli.</div></div>`;
+}
+
+/* ---- storico: un file per giorno, campionato ---- */
+async function caricaStorico(){
+  if(S.storicoCaricato) return;
+  S.storicoCaricato = true;
+  $("#caricaStorico").classList.add("hide");
+
+  const date = [];
+  for(let k = PASSO; k <= GIORNI; k += PASSO) date.push(meno(S.ultima, k));
+
+  let fatti = 0;
+  for(const d of date){
+    try{
+      const righe = [];
+      await leggiGz(percorso("prezzo_alle_8", d), r => righeGiorno(r, righe));
+      if(righe.length) S.giorni.set(d, righe);
+    }catch(e){ /* giorno mancante: si salta */ }
+    fatti++;
+    disegnaTrend(fatti < date.length ? `${fatti}/${date.length}` : null);
+  }
+}
+
+/* ---- province ---- */
+function chipsProvince(){
+  $("#chipsProv").innerHTML = Object.entries(TOSCANA).map(([s,n]) =>
+    `<button class="chip" data-prov="${s}" aria-pressed="${s===S.prov}">${n}</button>`).join("");
+}
+
+/* ---- filtri ---- */
+const oggi = () => S.giorni.get(S.ultima) || [];
+
+function costruisciFiltri(){
+  const righe = oggi().filter(r => S.plants[r.i].pv === S.prov);
+  S.brandCount.clear();
+  for(const p of S.plants) if(p.pv === S.prov) S.brandCount.set(p.b, (S.brandCount.get(p.b)||0)+1);
+
+  const bandiere = [...S.brandCount.entries()].filter(([,n]) => n >= 3).sort((a,b) => b[1]-a[1]);
+  if(!bandiere.length){ S.brand = ""; return; }
+  if(!bandiere.some(([b]) => b === S.brand)) S.brand = bandiere[0][0];
+
+  const opt = sel => bandiere.map(([b,n]) =>
+    `<option value="${esc(b)}"${b===sel?" selected":""}>${esc(b)} · ${n}</option>`).join("");
+  $("#brand").innerHTML = opt(S.brand);
+  $("#brand2").innerHTML = '<option value="">nessuno</option>' +
+    `<option value="*"${S.brand2==="*"?" selected":""}>media provinciale</option>` + opt(S.brand2);
+
+  const mie = righe.filter(r => S.plants[r.i].b === S.brand);
+  const carb = [...new Set(mie.map(r => r.f))]
+    .map(f => [f, mie.filter(r => r.f===f).length]).sort((a,b) => b[1]-a[1]).map(x => x[0]);
+  if(!carb.includes(S.fuel)) S.fuel = carb[0] || "Benzina";
+  $("#chipsFuel").innerHTML = carb.map(f =>
+    `<button class="chip" data-fuel="${esc(f)}" aria-pressed="${f===S.fuel}">${esc(f)}</button>`).join("");
+
+  const comuni = [...new Set(S.plants.filter(p => p.pv===S.prov && p.b===S.brand).map(p => p.c))]
+    .filter(Boolean).sort((a,b) => a.localeCompare(b,"it"));
+  if(!comuni.includes(S.com)) S.com = "";
+  $("#com").innerHTML = '<option value="">Tutta la provincia</option>' +
+    comuni.map(c => `<option value="${esc(c)}"${c===S.com?" selected":""}>${esc(c)}</option>`).join("");
+}
+
+const filtra = (righe, brand, com) => righe.filter(r => {
+  const p = S.plants[r.i];
+  return p.pv === S.prov && r.f === S.fuel && r.s === S.self &&
+    (brand === "*" || p.b === brand) && (!com || p.c === com);
+});
+
+/* ---- render ---- */
+function render(){
+  const righe = filtra(oggi(), S.brand, S.com);
+  const ambito = S.com || ("Provincia di " + TOSCANA[S.prov]);
+  $("#pillBrand").textContent = (S.brand || "—") + " · " + S.fuel + " " + (S.self ? "self" : "servito");
+  $("#pillScope").textContent = ambito;
+  $("#brandSub").textContent = S.fuel + " " + (S.self ? "self" : "servito") + " · " + ambito.toLowerCase();
+  $("#listScope").textContent = (S.brand || "—") + " · " + ambito.toLowerCase();
+  document.title = "Alla pompa · " + TOSCANA[S.prov];
+
+  if(!righe.length){
+    $("#valore").textContent = "—,———";
+    $("#sotto").textContent = "nessun impianto con questi filtri";
+    ["#loVal","#hiVal","#kCount","#kMed","#kDelta","#kFresh"].forEach(s => $(s).textContent = "—");
+    ["#loWho","#hiWho"].forEach(s => $(s).textContent = "");
+    ["#svgTrend","#svgBrand","#svgCom"].forEach(s => $(s).innerHTML = "");
+    $("#elenco").innerHTML = ""; $("#trendKey").innerHTML = "";
+    return;
+  }
+
+  const prezzi = righe.map(r => r.p), media = mean(prezzi);
+  $("#valore").textContent = eur(media);
+  const lo = righe.reduce((a,b) => b.p < a.p ? b : a);
+  const hi = righe.reduce((a,b) => b.p > a.p ? b : a);
+  $("#loVal").textContent = eur(lo.p); $("#loWho").textContent = S.plants[lo.i].c || "";
+  $("#hiVal").textContent = eur(hi.p); $("#hiWho").textContent = S.plants[hi.i].c || "";
+  $("#sotto").textContent = righe.length + (righe.length===1 ? " impianto" : " impianti") +
+    " · forbice " + eur(hi.p - lo.p) + " €";
+
+  $("#kCount").textContent = righe.length;
+  $("#kMed").textContent = eur(median(prezzi));
+
+  const altri = oggi().filter(r => {
+    const p = S.plants[r.i];
+    return p.pv===S.prov && r.f===S.fuel && r.s===S.self && p.b!==S.brand && (!S.com || p.c===S.com);
+  }).map(r => r.p);
+  const kd = $("#kDelta");
+  if(altri.length >= 5){
+    const d = media - mean(altri);
+    kd.textContent = (d>=0?"+":"−") + eur(Math.abs(d));
+    kd.className = d > 0 ? "su" : "giu";
+  }else{ kd.textContent = "—"; kd.className = ""; }
+
+  const freschi = righe.filter(r => r.d && (Date.parse(S.ultima)-Date.parse(r.d))/864e5 <= 3).length;
+  $("#kFresh").textContent = Math.round(freschi/righe.length*100) + "%";
+
+  disegnaTrend(); disegnaBandiere(); disegnaComuni(); disegnaElenco(righe);
+}
+
+/* ---- andamento: una media per ogni giorno scaricato ---- */
+function serie(brand){
+  return [...S.giorni.entries()].map(([d, righe]) => {
+    const v = filtra(righe, brand, S.com).map(r => r.p);
+    return v.length ? {d, v:mean(v), n:v.length} : null;
+  }).filter(Boolean).sort((a,b) => a.d.localeCompare(b.d));
+}
+
+function disegnaTrend(avanzamento){
+  const A = serie(S.brand);
+  const B = S.brand2 ? serie(S.brand2) : [];
+  $("#trendSrc").textContent = avanzamento
+    ? "caricamento storico " + avanzamento
+    : A.length + (A.length===1 ? " rilevazione" : " rilevazioni") + " · una ogni " + PASSO + " giorni";
+  $("#trendNote").textContent = A.length > 1
+    ? "Ogni punto è la media effettiva di quel giorno, calcolata sul file archiviato di quella data."
+    : "Serve più di un giorno per tracciare una linea: lo storico si sta caricando.";
+  $("#trendKey").innerHTML = `<span><i style="background:var(--acc)"></i>${esc(S.brand||"—")}</span>` +
+    (S.brand2 && B.length>1 ? `<span><i style="background:var(--cool)"></i>${esc(S.brand2==="*"?"media provinciale":S.brand2)}</span>` : "");
+
+  const svg = $("#svgTrend");
+  if(A.length < 2){ svg.innerHTML = testo(320,110,"In attesa dello storico…","tick","middle"); return; }
+
+  const W=640,H=230,L=46,R=12,T=16,Bm=30;
+  const tutti = A.concat(B);
+  const xmin = Math.min(...tutti.map(p=>Date.parse(p.d))), xmax = Math.max(...tutti.map(p=>Date.parse(p.d)));
+  const xs = d => L + (xmax===xmin ? 0 : (Date.parse(d)-xmin)/(xmax-xmin))*(W-L-R);
+  let min = Math.min(...tutti.map(p=>p.v)), max = Math.max(...tutti.map(p=>p.v));
+  const pad = Math.max((max-min)*.3, .004); min -= pad; max += pad;
+  const ys = v => T + (max-v)/(max-min)*(H-T-Bm);
+
+  let g = `<defs><linearGradient id="sf" x1="0" x2="0" y1="0" y2="1">
+    <stop offset="0%" stop-color="var(--acc)" stop-opacity=".2"/>
+    <stop offset="100%" stop-color="var(--acc)" stop-opacity="0"/></linearGradient></defs>`;
+  for(let i=0;i<=3;i++){
+    const v = min + (max-min)*i/3, y = ys(v);
+    g += `<line class="griglia" x1="${L}" y1="${y}" x2="${W-R}" y2="${y}"/>` + testo(L-8, y, eur(v), "tick", "end");
+  }
+  const traccia = p => p.map((q,i) => `${i?"L":"M"}${xs(q.d).toFixed(1)},${ys(q.v).toFixed(1)}`).join(" ");
+  if(B.length > 1)
+    g += `<path d="${traccia(B)}" fill="none" stroke="var(--cool)" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const dA = traccia(A);
+  g += `<path d="${dA} L${xs(A[A.length-1].d)},${H-Bm} L${xs(A[0].d)},${H-Bm} Z" fill="url(#sf)"/>`;
+  g += `<path d="${dA}" fill="none" stroke="var(--acc)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const u = A[A.length-1];
+  g += `<circle cx="${xs(u.d).toFixed(1)}" cy="${ys(u.v).toFixed(1)}" r="4.5" fill="var(--acc)" stroke="#fff" stroke-width="2.5"/>`;
+  A.forEach(p => { g += `<circle cx="${xs(p.d).toFixed(1)}" cy="${ys(p.v).toFixed(1)}" r="10" fill="transparent"><title>${etichetta(p.d)} · ${eur(p.v)} €/L · ${p.n} impianti</title></circle>`; });
+  const passo = Math.ceil(A.length/5);
+  A.forEach((p,i) => { if(i%passo===0 || i===A.length-1) g += testo(xs(p.d), H-12, etichetta(p.d), "tick", "middle"); });
+  svg.innerHTML = g;
+}
+
+/* ---- barre ---- */
+function barre(svg, voci){
+  if(!voci.length){ svg.innerHTML = testo(320,110,"Servono almeno due impianti per confrontare","tick","middle"); return; }
+  const W=640, L=116, R=62, hR=30, T=6, H = T + voci.length*hR + 6;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const vals = voci.map(v => v.valore);
+  const min = Math.min(...vals)*0.988, max = Math.max(...vals);
+  const w = v => Math.max(4, (v-min)/(max-min || 1)*(W-L-R));
+  let g = "";
+  voci.forEach((v,i) => {
+    const y = T + i*hR, larg = w(v.valore);
+    g += `<rect x="${L}" y="${y+6}" width="${larg.toFixed(1)}" height="${hR-14}" rx="5"
+      fill="${v.on ? "var(--acc)" : "var(--surface-2)"}"><title>${esc(v.etichetta)} · ${eur(v.valore)} €/L · ${v.nota}</title></rect>`;
+    g += testo(L-10, y+hR/2, v.etichetta.length>15 ? v.etichetta.slice(0,14)+"…" : v.etichetta, "lbl", "end");
+    g += testo(L+larg+8, y+hR/2, eur(v.valore), v.on ? "val on" : "val", "start");
+  });
+  svg.innerHTML = g;
+}
+const testo = (x,y,s,cls,anchor) =>
+  `<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor}" dominant-baseline="middle">${esc(s)}</text>`;
+
+function disegnaBandiere(){
+  const per = new Map();
+  for(const r of oggi()){
+    const p = S.plants[r.i];
+    if(p.pv!==S.prov || r.f!==S.fuel || r.s!==S.self) continue;
+    if(S.com && p.c!==S.com) continue;
+    push(per, p.b, r.p);
+  }
+  const voci = [...per.entries()].filter(([,v]) => v.length>=2)
+    .map(([b,v]) => ({b, m:mean(v), n:v.length}))
+    .sort((a,b) => b.n-a.n).slice(0,10).sort((a,b) => a.m-b.m);
+  barre($("#svgBrand"), voci.map(v => ({etichetta:v.b, valore:v.m, on:v.b===S.brand, nota:v.n+" impianti"})));
+}
+
+function disegnaComuni(){
+  const per = new Map();
+  for(const r of oggi()){
+    const p = S.plants[r.i];
+    if(p.pv!==S.prov || r.f!==S.fuel || r.s!==S.self || p.b!==S.brand) continue;
+    if(p.c) push(per, p.c, r.p);
+  }
+  const voci = [...per.entries()].filter(([,v]) => v.length>=2)
+    .map(([c,v]) => ({c, m:mean(v), n:v.length})).sort((a,b) => a.m-b.m).slice(0,10);
+  barre($("#svgCom"), voci.map(v => ({etichetta:v.c, valore:v.m, on:v.c===S.com, nota:v.n+" impianti"})));
+}
+
+function disegnaElenco(righe){
+  $("#elenco").innerHTML = [...righe].sort((a,b) => a.p-b.p).map(r => {
+    const p = S.plants[r.i];
+    const eta = r.d ? Math.round((Date.parse(S.ultima)-Date.parse(r.d))/864e5) : null;
+    const q = eta===null ? "n.d." : eta<=0 ? "stesso giorno" : eta===1 ? "1 giorno" : eta + " gg";
+    const meta = (p.lat && p.lon) ? `${p.lat},${p.lon}`
+      : encodeURIComponent(`${p.n || p.b} ${p.c} ${TOSCANA[S.prov]}`);
+    return `<div class="riga">
+      <div class="p">${eur(r.p)}</div>
+      <div class="d"><a href="https://www.google.com/maps/search/?api=1&query=${meta}" target="_blank" rel="noopener">
+        <b>${esc(p.c || "—")}</b><span>${esc((p.n||"").slice(0,54))}</span></a></div>
+      <div class="q${eta!==null && eta>7 ? " vecchio" : ""}">${q}</div></div>`;
+  }).join("");
+}
+
+/* ---- eventi ---- */
+$("#chipsProv").addEventListener("click", e => {
+  const b = e.target.closest("[data-prov]"); if(!b) return;
+  S.prov = b.dataset.prov; S.com = "";
+  [...$("#chipsProv").children].forEach(c => c.setAttribute("aria-pressed", String(c===b)));
+  costruisciFiltri(); render();
+});
+$("#chipsFuel").addEventListener("click", e => {
+  const b = e.target.closest("[data-fuel]"); if(!b) return;
+  S.fuel = b.dataset.fuel;
+  [...$("#chipsFuel").children].forEach(c => c.setAttribute("aria-pressed", String(c===b)));
+  render();
+});
+$("#brand").addEventListener("change", e => { S.brand = e.target.value; costruisciFiltri(); render(); });
+$("#brand2").addEventListener("change", e => { S.brand2 = e.target.value; disegnaTrend(); });
+$("#com").addEventListener("change", e => { S.com = e.target.value; render(); });
+const modo = self => {
+  S.self = self;
+  $("#cSelf").setAttribute("aria-pressed", String(self));
+  $("#cServ").setAttribute("aria-pressed", String(!self));
+  render();
+};
+$("#cSelf").addEventListener("click", () => modo(true));
+$("#cServ").addEventListener("click", () => modo(false));
+$("#caricaStorico").addEventListener("click", caricaStorico);
+
+avvio();
+})();
+</script>
+</body>
+</html>
